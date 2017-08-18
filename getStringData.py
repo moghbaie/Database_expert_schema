@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Aug 10 23:58:09 2017
-
 @author: moghb
 """
 from stringdb import get_interactions, get_interactions_image, resolve
+from complexPortaldb import do_request_complexdb
 import xml.etree.ElementTree as et
 import os
 import pandas as pd
+import numpy as np
 
-your_project_directory="C:\\Users\\moghb\\OneDrive\\Documents\\Database\\expert_schema"
+your_project_directory=os.getcwd()
 
 """
 Save network image of interactions to file.
@@ -52,3 +53,19 @@ def creat_model_input(identifier, species=None, limit=100):
 Example
 creat_model_input(['NUP53'], 'Human',20)
 """
+
+def make_test_dataset(identifier, species=None, limit=100):
+    result = creat_model_input(identifier, species, limit)
+    res = result[(result['interactor_A'] == identifier) | (result['interactor_B'] == identifier)]
+    interactors = do_request_complexdb(identifier)
+    if identifier in interactors: interactors.remove(identifier)
+    Y = res[['interactor_A','interactor_B']].isin(interactors)
+    Y = (Y['interactor_A'] == True) | (Y['interactor_B'] == True)
+    Y = np.array(Y.astype(int))
+    X = np.array(res[['nscore', 'fscore', 'pscore','hscore', 'ascore', 'escore', 'dscore', 'tscore']])
+    Z = res[['interactor_A','interactor_B']]
+    return X,Y,Z
+
+def make_train_dataset(identifier, species=None, limit=100):
+    X,Y,Z = make_test_dataset(identifier, species, limit)
+    return X,Y
