@@ -35,7 +35,7 @@ PSIMITAB_COLUMNS = [
 
 STRINGDB_REQUEST_TEMPLATE = "{http}://{address}/api/{format}/{request}"
 
-def do_request(request, req_format, params, https=False, database='string-db.org'):
+def do_request_stringdb(request, req_format, params, https=False, database='string-db.org'):
     """
     Send actual HTTP request to API.
     """
@@ -52,7 +52,7 @@ def do_request(request, req_format, params, https=False, database='string-db.org
     else:
         raise Exception(resp)
 
-def get_interactions(identifier, species=None, required_score=400, limit=20, q_format='psi-mi', *args):
+def get_interactions(identifier, species=None, required_score=400, limit=100, q_format='psi-mi', *args):
     """
     Query DB for interaction network in PSI-MI 2.5 format or PSI-MI-TAB format (similar to tsv).
     `identifier` is the protein name
@@ -62,19 +62,19 @@ def get_interactions(identifier, species=None, required_score=400, limit=20, q_f
     `species` may be specified (e.g. Human 9606, see: http://www.uniprot.org/taxonomy)
     Example:
     ########
-    results = stringdb.get_interaftions(['ALK'], format='psi-mi')
+    results = stringdb.get_interactions(['ALK'], q_format='psi-mi')
     If `format='psi-mi-tab'` results are returned in Tab-delimited form of PSI-MI
     (similar to tsv, modeled after the IntAct specification,
         Contains less info than XML response.)
     This method will return a pandas.DataFrame object.
     Example:
     ########
-    results = stringdb.get_interaftions(['ALK'], format='psi-mi-tab')
+    results = stringdb.get_interactions(['ALK'], q_format='psi-mi-tab')
     results.to_csv('outfile.tsv', delimiter='\t', index=False)
     """
     if q_format not in {'psi-mi', 'psi-mi-tab'}:
         raise Exception("format has to be one of ('psi-mi', 'psi-mi-tab'). {} is invalid.".format(q_format))
-    resp = do_request('interactions', q_format,
+    resp = do_request_stringdb('interactions', q_format,
         {'identifier': identifier, 'required_score': required_score, 'limit': limit, 'species': species}, *args)
     if q_format == 'psi-mi':
         return et.fromstring(resp.text)
@@ -95,7 +95,7 @@ def get_interactions_image(identifier, flavor, filename, required_score=950,
     `filename` is the file to save the png to.
     """
 
-    r = do_request('network', 'image',
+    r = do_request_stringdb('network', 'image',
         {'identifier': identifier, 'required_score': required_score, 'limit': limit}, *args)
     with open(filename, 'wb') as outfile:
         for chunk in r:
@@ -112,7 +112,7 @@ def resolve(identifier, species=None, *args, **kwargs):
     id_param_name = 'identifier' if isinstance(identifier, string_types) else 'identifiers'
     identifier = identifier if isinstance(identifier, string_types) else '\n'.join(identifier)
 
-    resp = do_request(request_name, req_format, {id_param_name: identifier, 'species': species}, *args, **kwargs)
+    resp = do_request_stringdb(request_name, req_format, {id_param_name: identifier, 'species': species}, *args, **kwargs)
     if not resp.status_code == 200:
         raise Exception(resp)
     try:
